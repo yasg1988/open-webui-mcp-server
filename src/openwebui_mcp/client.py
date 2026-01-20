@@ -5,9 +5,18 @@ ensuring all operations respect the user's permissions.
 """
 
 import os
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import httpx
+
+
+def ensure_dict(result: Union[dict, list, Any]) -> dict:
+    """Ensure the result is a dict. Wrap lists in {"items": [...]}."""
+    if isinstance(result, list):
+        return {"items": result, "total": len(result)}
+    if isinstance(result, dict):
+        return result
+    return {"value": result}
 
 
 class OpenWebUIClient:
@@ -37,6 +46,7 @@ class OpenWebUIClient:
         token = api_key or self.api_key
         headers = {
             "Content-Type": "application/json",
+            "Accept": "application/json",
         }
         if token:
             headers["Authorization"] = f"Bearer {token}"
@@ -63,7 +73,8 @@ class OpenWebUIClient:
             response.raise_for_status()
 
             if response.headers.get("content-type", "").startswith("application/json"):
-                return response.json()
+                result = response.json()
+                return ensure_dict(result)
             return {"text": response.text}
 
     # Convenience methods
@@ -85,7 +96,11 @@ class OpenWebUIClient:
 
     async def list_users(self, api_key: Optional[str] = None) -> dict:
         """List all users (admin only)."""
-        return await self.get("/api/v1/users/", api_key)
+        result = await self.get("/api/v1/users/", api_key)
+        # Wrap in users key if it's a raw list
+        if "items" in result and "users" not in result:
+            result["users"] = result.pop("items")
+        return result
 
     async def get_user(self, user_id: str, api_key: Optional[str] = None) -> dict:
         """Get a specific user."""
@@ -176,7 +191,11 @@ class OpenWebUIClient:
 
     async def list_models(self, api_key: Optional[str] = None) -> dict:
         """List all models."""
-        return await self.get("/api/v1/models/", api_key)
+        # Try the newer endpoint first, fall back to older one
+        try:
+            return await self.get("/api/models", api_key)
+        except httpx.HTTPStatusError:
+            return await self.get("/api/v1/models/", api_key)
 
     async def get_model(self, model_id: str, api_key: Optional[str] = None) -> dict:
         """Get a specific model."""
@@ -559,7 +578,7 @@ class OpenWebUIClient:
 
     async def get_config(self, api_key: Optional[str] = None) -> dict:
         """Get system configuration (admin only)."""
-        return await self.get("/api/v1/configs/", api_key)
+        return await self.get("/api/v1/configs", api_key)
 
     async def export_config(self, api_key: Optional[str] = None) -> dict:
         """Export full configuration (admin only)."""
