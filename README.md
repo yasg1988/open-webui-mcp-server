@@ -1,6 +1,14 @@
-# Open WebUI MCP Server
+# Open WebUI MCP Server (Fixed Fork)
 
 An MCP (Model Context Protocol) server that exposes Open WebUI's admin APIs as tools, allowing AI assistants to manage users, groups, models, knowledge bases, and more.
+
+> **This is a fixed fork of [troylar/open-webui-mcp-server](https://github.com/troylar/open-webui-mcp-server)**
+>
+> Fixes:
+> - ✅ Wrap all list responses in `{"items": [...]}` format for MCP compatibility
+> - ✅ Fix empty list responses causing `structured_content must be a dict` errors
+> - ✅ Add `Accept: application/json` header to prevent HTML responses
+> - ✅ Fix `/api/models` and `/api/v1/configs` endpoints for newer Open WebUI versions
 
 ## Features
 
@@ -22,14 +30,22 @@ An MCP (Model Context Protocol) server that exposes Open WebUI's admin APIs as t
 
 ## Installation
 
+### From this fork (recommended)
+
 ```bash
-pip install openwebui-mcp-server
+pip install git+https://github.com/yasg1988/open-webui-mcp-server.git
 ```
 
 Or with uv:
 
 ```bash
-uv pip install openwebui-mcp-server
+uv pip install git+https://github.com/yasg1988/open-webui-mcp-server.git
+```
+
+### From PyPI (original, may have bugs)
+
+```bash
+pip install openwebui-mcp-server
 ```
 
 ## Configuration
@@ -47,6 +63,29 @@ export OPENWEBUI_API_KEY=your-api-key
 ```
 
 ## Usage
+
+### With Claude Code
+
+Add to your Claude Code MCP settings (`~/.claude/settings.json` or project `.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "open-webui": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/yasg1988/open-webui-mcp-server.git",
+        "openwebui-mcp"
+      ],
+      "env": {
+        "OPENWEBUI_URL": "https://your-openwebui-instance.com",
+        "OPENWEBUI_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
 
 ### With Claude Desktop
 
@@ -146,6 +185,15 @@ model = await client.create_model(
 | `create_knowledge_base` | Create knowledge base | Any |
 | `delete_knowledge_base` | Delete knowledge base | Owner |
 
+### File Management
+| Tool | Description | Permission |
+|------|-------------|------------|
+| `list_files` | List all uploaded files | Any |
+| `search_files` | Search files by pattern | Any |
+| `get_file` | Get file metadata | Any |
+| `get_file_content` | Get extracted text content | Any |
+| `delete_file` | Delete a file | Owner |
+
 ### Chat Management
 | Tool | Description | Permission |
 |------|-------------|------------|
@@ -153,6 +201,49 @@ model = await client.create_model(
 | `get_chat` | Get chat messages | Own |
 | `delete_chat` | Delete a chat | Own |
 | `delete_all_chats` | Delete all chats | Own |
+| `archive_chat` | Archive a chat | Own |
+| `share_chat` | Share a chat publicly | Own |
+| `clone_chat` | Clone a shared chat | Any |
+
+### Memory Management
+| Tool | Description | Permission |
+|------|-------------|------------|
+| `list_memories` | List stored memories | Own |
+| `add_memory` | Add a new memory | Own |
+| `query_memories` | Semantic search memories | Own |
+| `update_memory` | Update a memory | Own |
+| `delete_memory` | Delete a memory | Own |
+| `delete_all_memories` | Delete all memories | Own |
+
+### Prompt Management
+| Tool | Description | Permission |
+|------|-------------|------------|
+| `list_prompts` | List prompt templates | Any |
+| `create_prompt` | Create a prompt template | Any |
+| `get_prompt` | Get prompt by command | Any |
+| `update_prompt` | Update a prompt | Owner |
+| `delete_prompt` | Delete a prompt | Owner |
+
+### Notes Management
+| Tool | Description | Permission |
+|------|-------------|------------|
+| `list_notes` | List all notes | Own |
+| `create_note` | Create a note | Own |
+| `get_note` | Get a note | Own |
+| `update_note` | Update a note | Own |
+| `delete_note` | Delete a note | Own |
+
+### Channels (Team Chat)
+| Tool | Description | Permission |
+|------|-------------|------------|
+| `list_channels` | List team channels | Any |
+| `create_channel` | Create a channel | Admin |
+| `get_channel` | Get channel details | Any |
+| `update_channel` | Update channel | Admin |
+| `delete_channel` | Delete channel | Admin |
+| `get_channel_messages` | Get messages | Any |
+| `post_channel_message` | Post a message | Any |
+| `delete_channel_message` | Delete a message | Owner/Admin |
 
 ### System
 | Tool | Description | Permission |
@@ -160,12 +251,16 @@ model = await client.create_model(
 | `list_tools` | List available tools | Any |
 | `list_functions` | List functions/filters | Any |
 | `get_system_config` | Get system config | Admin |
+| `export_config` | Export full config | Admin |
+| `get_banners` | Get system banners | Any |
+| `get_models_config` | Get models config | Admin |
+| `get_tool_servers` | Get MCP servers | Admin |
 
 ## Development
 
 ```bash
 # Clone the repo
-git clone https://github.com/troylar/open-webui-mcp-server.git
+git clone https://github.com/yasg1988/open-webui-mcp-server.git
 cd open-webui-mcp-server
 
 # Install dev dependencies
@@ -191,3 +286,4 @@ Contributions welcome! Please open an issue or PR on GitHub.
 - [Open WebUI](https://github.com/open-webui/open-webui) - The web UI this server manages
 - [FastMCP](https://github.com/jlowin/fastmcp) - The MCP framework used
 - [MCPO](https://github.com/open-webui/mcpo) - MCP to OpenAPI proxy
+- [Original repo](https://github.com/troylar/open-webui-mcp-server) - Original project by troylar
